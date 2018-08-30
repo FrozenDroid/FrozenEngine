@@ -1,8 +1,14 @@
 R"(
 #version 330
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
 
-layout(location = 0) in vec4 position;
+smooth out vec3 theColor;
+uniform mat4 rotationMatrix;
+
 void main() {
-    gl_Position = position;
+    //gl_Position = position;
+    gl_Position = rotationMatrix * vec4(position, 1.0f);
+    theColor = color;
 }
 )"

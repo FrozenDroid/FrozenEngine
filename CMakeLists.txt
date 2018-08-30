@@ -10,17 +10,29 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${SRC_DIR}")
 set(CMAKE_CXX_STANDARD 17)
 
 
+# GLM
+find_package(glm REQUIRED)
+#target_link_libraries(${PROJECT_NAME} glm)
+
 # GLFW
 find_package(glfw3 REQUIRED)
-#find_package(glfw3 3.2 REQUIRED)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 target_link_libraries(${PROJECT_NAME} glfw)
-#target_include_directories(${PROJECT_NAME} PUBLIC ${GLFW3_INCLUDE_DIR})
+
+
 # GLAD
 set(GLAD_DIR "${LIB_DIR}/glad")
 add_library("glad" "${GLAD_DIR}/src/glad.c")
 target_include_directories("glad" PRIVATE "${GLAD_DIR}/include")
 target_include_directories(${PROJECT_NAME} PRIVATE "${GLAD_DIR}/include")
 target_link_libraries(${PROJECT_NAME} "glad" "${CMAKE_DL_LIBS}")
+
+# GLAD
+set(STB_IMAGE_DIR "${LIB_DIR}/stb_image")
+add_library("stb_image" "${STB_IMAGE_DIR}/src/stb_image.cpp")
+target_include_directories("stb_image" PRIVATE "${STB_IMAGE_DIR}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE "${STB_IMAGE_DIR}/include")
+target_link_libraries(${PROJECT_NAME} "stb_image" "${CMAKE_DL_LIBS}")
+

@@ -1,8 +1,9 @@
 R"(
 #version 330
 
-out vec4 color;
+smooth in vec3 theColor;
+out vec4 outputColor;
 void main() {
-    gl_FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    outputColor = vec4(theColor, 1.0f);
 }
 )"

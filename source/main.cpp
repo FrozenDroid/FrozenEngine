@@ -2,22 +2,23 @@
 #include <iostream>
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include "stb_image.h"
+#include "glm/gtx/rotate_vector.hpp"
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/glm.hpp>
 #include <vector>
 #include <stdlib.h>
 #include <fstream>
 #include <algorithm>
 
 const float vertexPositions[] = {
-        0.75f, 0.75f, 0.0f, 1.0f,
-        0.75f, -0.75f, 0.0f, 1.0f,
-        -0.75f, -0.75f, 0.0f, 1.0f,
+        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
 };
-
-void display() {
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-//    glutSwapBuffers();
-}
 
 GLuint positionBufferObject;
 
@@ -32,13 +33,12 @@ void initializeVertexBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
 
     // Unbind the buffer from the context.
-//    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "Error: %s\n", description);
 }
-
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -49,7 +49,7 @@ GLuint createProgram(const std::vector<GLuint> &shaderList) {
     GLuint program = glCreateProgram();
 
     for (unsigned int iLoop : shaderList) {
-        printf("Attaching shader #%i\n", iLoop);
+        printf("Attaching shader #%i.\n", iLoop);
         glAttachShader(program, iLoop);
     }
 
@@ -75,7 +75,6 @@ GLuint createProgram(const std::vector<GLuint> &shaderList) {
 GLuint createShader(GLenum shaderType, const char* shaderSource) {
     GLuint shader = glCreateShader(shaderType);
     glShaderSource(shader, 1, &shaderSource, nullptr);
-    printf("%s", shaderSource);
     glCompileShader(shader);
 
     GLint status;
@@ -105,7 +104,6 @@ GLuint createShader(GLenum shaderType, const char* shaderSource) {
     }
 
     return shader;
-//    printf("%s", shaderSource.c_str());
 }
 
 GLuint initialiseProgram() {
@@ -144,9 +142,8 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
     window = glfwCreateWindow(640, 480, "Simple example", nullptr, nullptr);
     if (!window) {
@@ -157,33 +154,62 @@ int main(int argc, char *argv[]) {
     glfwMakeContextCurrent(window);
 
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
-    glfwSwapInterval(1);
-//    glViewport(0, 0, 640, 480);
+    glfwSwapInterval(0);
 
     auto program = initialiseProgram();
     initializeVertexBuffers();
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-//    GLuint vao;
-//    glGenVertexArrays(1, &vao);
-//    glBindVertexArray(vao);
-//    glCreateShader()
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    auto unitMatrix = glm::mat4(1.0f);
+
+    float rotation = 0;
+    int tex_width, text_height, nrChannels;
+    unsigned char *data = stbi_load("container.jpg", &tex_width, &text_height, &nrChannels, 0);
+
+
+    auto viewMatrix = glm::lookAt(glm::vec3(0.0, 0.0, 5.0),
+                                  glm::vec3(0.0, 0.0, 0.0),
+                                  glm::vec3(0.0, 1.0, 0.0));
+
     while (!glfwWindowShouldClose(window)) {
-//        float ratio;
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-//        ratio = width / (float) height;
         glViewport(0, 0, width, height);
-//        glClearColor(0.0, 0, 0, 0);
+
+        GLfloat aspectRatio = float(width) / float(height);
+        glm::mat4 mat_projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 10.0f);
+        glClearColor(0.0, 0.0, 0.0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        if (rotation < 360) {
+            rotation += 0.001;
+        } else {
+            rotation = 0;
+        }
+
+        auto rotationMatrix = glm::rotate(unitMatrix, glm::radians(rotation), glm::vec3(0.0f, 0.0f, -1.0f));
+
+        auto translationMatrix = glm::translate(glm::vec3(0.0, -0.5, 0.0));
+
         glUseProgram(program);
-//        glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+
+        GLint matrixId = glGetUniformLocation(program, "rotationMatrix");
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*) 36);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*) 36);
+        glUniformMatrix4fv(matrixId, 1, GL_FALSE, glm::value_ptr(mat_projection * rotationMatrix * translationMatrix * glm::translate(glm::vec3(0.0, 0.634, 0.0))));
 
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
-//        glDisableVertexAttribArray(0);
-//        glUseProgram(0);
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glUseProgram(0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
