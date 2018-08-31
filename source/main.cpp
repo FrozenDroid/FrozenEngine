@@ -5,35 +5,122 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "stb_image.h"
-#include "glm/gtx/rotate_vector.hpp"
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/glm.hpp>
+#include "glm/gtx/string_cast.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <stdlib.h>
 #include <fstream>
 #include <algorithm>
 
-const float vertexPositions[] = {
-        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+float vertices[] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+unsigned int indices[] = {
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
 };
 
-GLuint positionBufferObject;
+glm::vec3 cubePositions[] = {
+        glm::vec3( 0.0f,  0.0f,  0.0f),
+        glm::vec3( 2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f, -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3( 2.4f, -0.4f, -3.5f),
+        glm::vec3(-1.7f,  3.0f, -7.5f),
+        glm::vec3( 1.3f, -2.0f, -2.5f),
+        glm::vec3( 1.5f,  2.0f, -2.5f),
+        glm::vec3( 1.5f,  0.2f, -1.5f),
+        glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
+GLuint VBO, EBO, VAO;
+unsigned int texture;
 
 void initializeVertexBuffers() {
-    // Create vertex buffer (just one)
-    glGenBuffers(1, &positionBufferObject);
+    // Create vertex buffer
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
 
     // Bind the newly created vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Put the vertices into the vertex buffer.
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // Unbind the buffer from the context.
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("/home/vincent/CLionProjects/OpenGLTest/container.jpg", &width, &height, &nrChannels, 0);
+
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 }
 
 static void error_callback(int error, const char *description) {
@@ -132,6 +219,20 @@ GLuint initialiseProgram() {
     return program;
 }
 
+int SCR_WIDTH = 800, SCR_HEIGHT = 600;
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    if (width + height <= 0) { return; }
+    // make sure the viewport matches the new window dimensions; note that width and
+    // height will be significantly larger than specified on retina displays.
+    SCR_WIDTH = width;
+    SCR_HEIGHT = height;
+
+    printf("New width: %i, height: %i\n", width, height);
+    glViewport(0, 0, width, height);
+}
+
 int main(int argc, char *argv[]) {
 
 
@@ -142,10 +243,14 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+//    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+//    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    window = glfwCreateWindow(640, 480, "Simple example", nullptr, nullptr);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     if (!window) {
         glfwTerminate();
         exit(EXIT_FAILURE);
@@ -154,62 +259,64 @@ int main(int argc, char *argv[]) {
     glfwMakeContextCurrent(window);
 
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
-    glfwSwapInterval(0);
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     auto program = initialiseProgram();
     initializeVertexBuffers();
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 
-    auto unitMatrix = glm::mat4(1.0f);
+    unsigned int frames = 0;
+    double lastTime = 0, currentTime = 0;
+//    glfwGetFramebufferSize(window, &SCR_WIDTH, &SCR_HEIGHT);
 
-    float rotation = 0;
-    int tex_width, text_height, nrChannels;
-    unsigned char *data = stbi_load("container.jpg", &tex_width, &text_height, &nrChannels, 0);
+    glEnable(GL_DEPTH_TEST);
 
-
-    auto viewMatrix = glm::lookAt(glm::vec3(0.0, 0.0, 5.0),
-                                  glm::vec3(0.0, 0.0, 0.0),
-                                  glm::vec3(0.0, 1.0, 0.0));
+    glfwSwapInterval(0);
 
     while (!glfwWindowShouldClose(window)) {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        glViewport(0, 0, width, height);
-
-        GLfloat aspectRatio = float(width) / float(height);
-        glm::mat4 mat_projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 10.0f);
-        glClearColor(0.0, 0.0, 0.0, 0.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        if (rotation < 360) {
-            rotation += 0.001;
-        } else {
-            rotation = 0;
+        currentTime = glfwGetTime();
+        frames++;
+        if (currentTime - lastTime >= 1.0) {
+            lastTime = currentTime;
+            printf("FPS: %u\n", frames);
+            frames = 0;
         }
 
-        auto rotationMatrix = glm::rotate(unitMatrix, glm::radians(rotation), glm::vec3(0.0f, 0.0f, -1.0f));
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        auto translationMatrix = glm::translate(glm::vec3(0.0, -0.5, 0.0));
-
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
         glUseProgram(program);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
 
-        GLint matrixId = glGetUniformLocation(program, "rotationMatrix");
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*) 36);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*) 36);
-        glUniformMatrix4fv(matrixId, 1, GL_FALSE, glm::value_ptr(mat_projection * rotationMatrix * translationMatrix * glm::translate(glm::vec3(0.0, 0.634, 0.0))));
+        float radius = 10.0f;
+        float camX   = (float) sin(glfwGetTime()) * radius;
+        float camZ   = (float) cos(glfwGetTime()) * radius;
+        auto view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 projection;
+        projection = glm::perspective(glm::radians(35.0f), (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        int modelLoc = glGetUniformLocation(program, "model");
 
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glUseProgram(0);
+        int viewLoc = glGetUniformLocation(program, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+        int projectionLoc = glGetUniformLocation(program, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+        glBindVertexArray(VAO);
+        for(unsigned int i = 0; i < 10; i++)
+        {
+            glm::mat4 model(1.0);
+            model = glm::translate(model, cubePositions[i]);
+            float angle = 20.0f * i;
+            model = glm::rotate(model, (float)glfwGetTime() + glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
+//        glDrawArrays(GL_TRIANGLES, 0, 36);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
